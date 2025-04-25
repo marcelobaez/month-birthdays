@@ -1,0 +1,18 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "month-birthdays-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/monthBirthdaysWebpart/MonthBirthdaysWebpart.js",
+          "manifest": "./src/webparts/monthBirthdaysWebpart/MonthBirthdaysWebpart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "MonthBirthdaysWebpartStrings": "lib/webparts/monthBirthdaysWebpart/loc/{locale}.js"
+  }
+}
