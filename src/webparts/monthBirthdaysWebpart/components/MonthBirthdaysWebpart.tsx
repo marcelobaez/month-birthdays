@@ -8,15 +8,13 @@ import {
   SPHttpClientConfiguration,
 } from "@microsoft/sp-http";
 import { Environment, EnvironmentType } from "@microsoft/sp-core-library";
-import { endOfMonth, format, setYear } from "date-fns";
-// import { setYear } from "date-fns";
+import { format, setYear } from "date-fns";
 import {
   ActionButton,
   Callout,
   getId,
   Icon,
   IStackTokens,
-  Link,
   PersonaSize,
   Spinner,
   SpinnerSize,
@@ -43,30 +41,16 @@ const clientConfigODataV3: SPHttpClientConfiguration =
   SPHttpClient.configurations.v1.overrideWith(spSearchConfig);
 
 const pivotDay: Date = setYear(new Date(), 2000);
-const dateFormat: string = "dd-MM-yyyy";
-const today: string = format(pivotDay, dateFormat);
 
-interface ICell {
-  Key: string;
-  Value: string;
-}
+  interface IOdataResponse { "odata.metadata": string; "odata.nextLink": string; value: { Title: string; field_1: string; "odata.etag": string; "odata.editLink": string; "odata.id": string; "odata.type": string }[] }
 
-interface IPerson {
-  Cells: ICell[];
-}
-
-interface ISearchResult {
-  PrimaryQueryResult: {
-    RelevantResults: {
-      Table: {
-        Rows: IPerson[];
-      };
-    };
-  };
+interface IMonthBirthday {
+  Title: string;
+  field_1: string;
 }
 
 export interface IState {
-  monthBirthdays?: IPerson[];
+  monthBirthdays?: IMonthBirthday[];
   IsLoading?: boolean;
   IsDataFound?: boolean;
   IsCalloutVisible?: boolean;
@@ -108,8 +92,11 @@ export default class TestWebpartNode22 extends React.Component<
   }
 
   public compareToToday(currentDate: string): boolean {
-    const parsedCurrent: string = format(new Date(currentDate), dateFormat);
-    return parsedCurrent === today;
+    const [day, month] = currentDate.split('/');
+    const normalizedDay = day.length === 1 ? `0${day}` : day;
+    const normalizedMonth = month.length === 1 ? `0${month}` : month;
+    const normalizedDate = `${normalizedDay}/${normalizedMonth}`;
+    return normalizedDate === format(pivotDay, "dd/MM");
   }
 
   public render(): React.ReactElement<ITestWebpartNode22Props> {
@@ -161,25 +148,9 @@ export default class TestWebpartNode22 extends React.Component<
             >
               <div className={mainStyles.header}>
                 <p className={mainStyles.title} id={this._labelId}>
-                  ¿Qué hacer si mi cumpleaños no aparece aquí?
+                Si preferís no mostrar tu cumpleaños o detectás un error,
+                podés escribirnos a rrhhbue@eby.org.ar
                 </p>
-              </div>
-              <div className={mainStyles.inner}>
-                <div>
-                  <p className={mainStyles.subtext} id={this._descriptionId}>
-                    Es probable que no haya completado la fecha de su nacimiento
-                    en su perfil de Office.
-                  </p>
-                </div>
-                <div className={mainStyles.actions}>
-                  <Link
-                    className={mainStyles.link}
-                    href="https://ebyorgar-my.sharepoint.com/_layouts/15/me.aspx?v=profile"
-                    target="_blank"
-                  >
-                    Ir a mi perfil
-                  </Link>
-                </div>
               </div>
             </Callout>
           </Stack.Item>
@@ -191,29 +162,16 @@ export default class TestWebpartNode22 extends React.Component<
         IsDataFound &&
         monthBirthdays &&
         monthBirthdays.length > 0 ? (
-          monthBirthdays.map((person: IPerson) => {
+          monthBirthdays.map((person: IMonthBirthday) => {
             const birthday: string =
-              person.Cells.find((cell: ICell) => cell.Key === "Birthday5")
-                ?.Value || "";
+              person.field_1;
             const fullName: string =
-              person.Cells.find((cell: ICell) => cell.Key === "PreferredName")
-                ?.Value || "";
-            const officeNumber: string =
-              person.Cells.find((cell: ICell) => cell.Key === "OfficeNumber")
-                ?.Value || "";
-            const pictureUrl: string =
-              person.Cells.find((cell: ICell) => cell.Key === "PictureUrl")
-                ?.Value || "";
+              person.Title;
             const showToday: boolean = this.compareToToday(birthday);
 
             const examplePersona: IPersonaSharedProps = {
-              imageUrl: pictureUrl,
               text: fullName,
-              secondaryText: officeNumber,
-              tertiaryText: format(new Date(birthday), "dd/MM"),
-              optionalText:
-                person.Cells.find((cell: ICell) => cell.Key === "AADObjectID")
-                  ?.Value || "",
+              tertiaryText: birthday,
             };
 
             return (
@@ -230,7 +188,7 @@ export default class TestWebpartNode22 extends React.Component<
                 }
                 onRenderTertiaryText={this._onRenderTertiaryText}
                 hidePersonaDetails={false}
-                key={person.Cells[1].Value}
+                key={person.field_1 + person.Title}
               />
             );
           })
@@ -242,31 +200,48 @@ export default class TestWebpartNode22 extends React.Component<
   }
 
   private async _getListData(): Promise<void> {
-    const { context, maxDisplayNumber } = this.props;
-    const lastDayOfMonth: string = format(endOfMonth(pivotDay), "yyyy-MM-dd");
+    const { context } = this.props;
 
     try {
       this.setState({ IsLoading: true });
-      const queryMonth: SPHttpClientResponse = await context.spHttpClient.get(
-        context.pageContext.web.absoluteUrl +
-          "/_api/search/query?querytext='Birthday5<=\"" +
-          lastDayOfMonth +
-          '" AND Birthday5>="' +
-          format(pivotDay, "yyyy-MM-dd") +
-          "\"'" +
-          "&sourceid='b09a7990-05ea-4af9-81ef-edfab16c4e31'" +
-          "&selectproperties='PreferredName,FirstName,LastName,Birthday5," +
-          "PictureUrl,OfficeNumber,WorkPhone,AADObjectID'" +
-          "&rowlimit=" +
-          maxDisplayNumber.toString() +
-          "&sortlist='Birthday5:descending'",
-        clientConfigODataV3
-      );
 
-      const resultsMonth: ISearchResult = await queryMonth.json();
+      // Use an OR expression in the OData filter to check for both '/06' and '/6'
+      const endpoint = `https://ebyorgar.sharepoint.com/sites/intranet_EBY/_api/web/lists/getbytitle('birthdays_eby')/items?$select=Title,field_1`;
+      const response: SPHttpClientResponse = await context.spHttpClient.get(endpoint, clientConfigODataV3);
+      const data: IOdataResponse = await response.json();
+
+      const today = new Date();
+      const todayDay = today.getDate();
+      const todayMonth = today.getMonth() + 1;
+
+      const filtered = data.value
+        .filter((item: IMonthBirthday) => {
+          // Only keep items for the current month
+          const [dayStr, monthStr] = item.field_1.split('/');
+          const day = parseInt(dayStr, 10);
+          const month = parseInt(monthStr, 10);
+
+          // Only birthdays in the current month
+          if (month !== todayMonth) return false;
+
+          // Only birthdays today or later
+          return day >= todayDay;
+        })
+        .sort((a: IMonthBirthday, b: IMonthBirthday) => {
+          const [dayA] = a.field_1.split('/').map(Number);
+          const [dayB] = b.field_1.split('/').map(Number);
+          return dayA - dayB;
+        });
+      
+      const resultsMonth = filtered.map((item: IMonthBirthday) => {
+        return {
+          Title: item.Title,
+          field_1: item.field_1,
+        };
+      });
 
       if (
-        resultsMonth.PrimaryQueryResult.RelevantResults.Table.Rows.length === 0
+        resultsMonth.length === 0
       ) {
         this.setState({ IsDataFound: false });
       }
@@ -275,9 +250,10 @@ export default class TestWebpartNode22 extends React.Component<
         IsLoading: false,
         IsDataFound: true,
         monthBirthdays:
-          resultsMonth.PrimaryQueryResult.RelevantResults.Table.Rows,
+          resultsMonth,
       });
     } catch (err) {
+      console.log(err);
       console.error("Ocurrió un error:", err.message);
     }
   }
@@ -323,12 +299,6 @@ export default class TestWebpartNode22 extends React.Component<
           }}
         />
         {"¡Hoy cumple años! "}
-        <Link
-          target="_blank"
-          href={`https://lam.delve.office.com/?u=${props.optionalText}&v=work`}
-        >
-          {"Ir al perfil"}
-        </Link>
       </div>
     );
   };

@@ -32,6 +32,12 @@
         "id": "4c1c670b-f84a-40d7-87b2-93b51bc0efe8",
         "version": "1.0.0.0"
       }
+    ],
+    "webApiPermissionRequests": [
+      {
+        "resource": "Microsoft SharePoint",
+        "scope": "user_impersonation"
+      }
     ]
   },
   "paths": {
