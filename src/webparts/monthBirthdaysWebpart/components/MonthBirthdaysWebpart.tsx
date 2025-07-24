@@ -42,7 +42,18 @@ const clientConfigODataV3: SPHttpClientConfiguration =
 
 const pivotDay: Date = setYear(new Date(), 2000);
 
-  interface IOdataResponse { "odata.metadata": string; "odata.nextLink": string; value: { Title: string; field_1: string; "odata.etag": string; "odata.editLink": string; "odata.id": string; "odata.type": string }[] }
+interface IOdataResponse {
+  "odata.metadata": string;
+  "odata.nextLink": string;
+  value: {
+    Title: string;
+    field_1: string;
+    "odata.etag": string;
+    "odata.editLink": string;
+    "odata.id": string;
+    "odata.type": string;
+  }[];
+}
 
 interface IMonthBirthday {
   Title: string;
@@ -92,7 +103,7 @@ export default class TestWebpartNode22 extends React.Component<
   }
 
   public compareToToday(currentDate: string): boolean {
-    const [day, month] = currentDate.split('/');
+    const [day, month] = currentDate.split("/");
     const normalizedDay = day.length === 1 ? `0${day}` : day;
     const normalizedMonth = month.length === 1 ? `0${month}` : month;
     const normalizedDate = `${normalizedDay}/${normalizedMonth}`;
@@ -128,11 +139,11 @@ export default class TestWebpartNode22 extends React.Component<
             <span ref={this._menuButtonElement}>
               <ActionButton
                 data-automation-id="test"
-                iconProps={{ iconName: "EmojiNeutral" }}
+                iconProps={{ iconName: "Edit" }}
                 allowDisabledFocus={true}
                 onClick={this._onShowMenuClicked}
               >
-                ¿No apareces?
+                ¿Querés modificar alguna información?
               </ActionButton>
             </span>
             <Callout
@@ -148,8 +159,8 @@ export default class TestWebpartNode22 extends React.Component<
             >
               <div className={mainStyles.header}>
                 <p className={mainStyles.title} id={this._labelId}>
-                Si preferís no mostrar tu cumpleaños o detectás un error,
-                podés escribirnos a rrhhbue@eby.org.ar
+                  Si preferís no mostrar tu cumpleaños o detectás un error,
+                  podés escribirnos a rrhhbue@eby.org.ar
                 </p>
               </div>
             </Callout>
@@ -163,10 +174,8 @@ export default class TestWebpartNode22 extends React.Component<
         monthBirthdays &&
         monthBirthdays.length > 0 ? (
           monthBirthdays.map((person: IMonthBirthday) => {
-            const birthday: string =
-              person.field_1;
-            const fullName: string =
-              person.Title;
+            const birthday: string = person.field_1;
+            const fullName: string = person.Title;
             const showToday: boolean = this.compareToToday(birthday);
 
             const examplePersona: IPersonaSharedProps = {
@@ -206,8 +215,11 @@ export default class TestWebpartNode22 extends React.Component<
       this.setState({ IsLoading: true });
 
       // Use an OR expression in the OData filter to check for both '/06' and '/6'
-      const endpoint = `https://ebyorgar.sharepoint.com/sites/intranet_EBY/_api/web/lists/getbytitle('birthdays_eby')/items?$select=Title,field_1`;
-      const response: SPHttpClientResponse = await context.spHttpClient.get(endpoint, clientConfigODataV3);
+      const endpoint = `https://ebyorgar.sharepoint.com/sites/intranet_EBY/_api/web/lists/getbytitle('birthdays_eby')/items?$select=Title,field_1&$top=2000`;
+      const response: SPHttpClientResponse = await context.spHttpClient.get(
+        endpoint,
+        clientConfigODataV3
+      );
       const data: IOdataResponse = await response.json();
 
       const today = new Date();
@@ -217,7 +229,9 @@ export default class TestWebpartNode22 extends React.Component<
       const filtered = data.value
         .filter((item: IMonthBirthday) => {
           // Only keep items for the current month
-          const [dayStr, monthStr] = item.field_1.split('/');
+          const [dayStr, monthStr] = item.field_1
+            .split("/")
+            .map((s) => s.trim());
           const day = parseInt(dayStr, 10);
           const month = parseInt(monthStr, 10);
 
@@ -228,11 +242,11 @@ export default class TestWebpartNode22 extends React.Component<
           return day >= todayDay;
         })
         .sort((a: IMonthBirthday, b: IMonthBirthday) => {
-          const [dayA] = a.field_1.split('/').map(Number);
-          const [dayB] = b.field_1.split('/').map(Number);
+          const [dayA] = a.field_1.split("/").map(Number);
+          const [dayB] = b.field_1.split("/").map(Number);
           return dayA - dayB;
         });
-      
+
       const resultsMonth = filtered.map((item: IMonthBirthday) => {
         return {
           Title: item.Title,
@@ -240,17 +254,14 @@ export default class TestWebpartNode22 extends React.Component<
         };
       });
 
-      if (
-        resultsMonth.length === 0
-      ) {
+      if (resultsMonth.length === 0) {
         this.setState({ IsDataFound: false });
       }
 
       this.setState({
         IsLoading: false,
         IsDataFound: true,
-        monthBirthdays:
-          resultsMonth,
+        monthBirthdays: resultsMonth,
       });
     } catch (err) {
       console.log(err);
