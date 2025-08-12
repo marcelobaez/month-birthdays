@@ -13,7 +13,8 @@
     "serve": "fast-serve"
   },
   "dependencies": {
-    "@fluentui/react": "^8.106.4",
+    "@fluentui/react-components": "^9.68.3",
+    "@fluentui/react-icons": "^2.0.307",
     "@microsoft/sp-component-base": "1.21.0",
     "@microsoft/sp-core-library": "1.21.0",
     "@microsoft/sp-lodash-subset": "1.21.0",
@@ -23,6 +24,7 @@
     "date-fns": "^4.1.0",
     "react": "17.0.1",
     "react-dom": "17.0.1",
+    "react-window": "^1.8.11",
     "tslib": "2.3.1"
   },
   "devDependencies": {
@@ -34,13 +36,14 @@
     "@rushstack/eslint-config": "4.0.1",
     "@types/react": "17.0.45",
     "@types/react-dom": "17.0.17",
+    "@types/react-window": "^1.8.8",
     "@types/webpack-env": "~1.15.2",
     "ajv": "^6.12.5",
     "eslint": "8.57.1",
     "eslint-plugin-react-hooks": "4.3.0",
     "gulp": "4.0.2",
     "spfx-fast-serve": "^4.0.2",
-    "typescript": "~5.3.3",
-    "spfx-fast-serve-helpers": "~1.21.0"
+    "spfx-fast-serve-helpers": "~1.21.0",
+    "typescript": "~5.3.3"
   }
 }

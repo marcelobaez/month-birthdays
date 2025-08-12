@@ -9,23 +9,23 @@ import {
 } from "@microsoft/sp-http";
 import { Environment, EnvironmentType } from "@microsoft/sp-core-library";
 import { format, setYear } from "date-fns";
+import { FixedSizeList } from "react-window";
+import { FoodCakeFilled, EditRegular } from "@fluentui/react-icons";
 import {
-  ActionButton,
-  Callout,
-  getId,
-  Icon,
-  IStackTokens,
-  PersonaSize,
+  webLightTheme,
+  Button,
+  FluentProvider,
+  List,
+  ListItem,
+  MessageBar,
+  MessageBarTitle,
+  Persona,
+  Popover,
+  PopoverSurface,
+  PopoverTrigger,
   Spinner,
-  SpinnerSize,
-  Stack,
-} from "@fluentui/react";
-import { IPersonaProps, IPersonaSharedProps } from "@fluentui/react";
-import { PersonaPresence } from "@fluentui/react";
-import { Persona } from "@fluentui/react";
-import { MessageBar } from "@fluentui/react";
+} from "@fluentui/react-components";
 import {
-  mainStyles,
   webpartHeaderEditStyles,
   webpartHeaderStyles,
   webpartHeaderViewStyles,
@@ -41,7 +41,6 @@ const clientConfigODataV3: SPHttpClientConfiguration =
   SPHttpClient.configurations.v1.overrideWith(spSearchConfig);
 
 const pivotDay: Date = setYear(new Date(), 2000);
-
 interface IOdataResponse {
   "odata.metadata": string;
   "odata.nextLink": string;
@@ -64,7 +63,6 @@ export interface IState {
   monthBirthdays?: IMonthBirthday[];
   IsLoading?: boolean;
   IsDataFound?: boolean;
-  IsCalloutVisible?: boolean;
 }
 
 export default class TestWebpartNode22 extends React.Component<
@@ -77,15 +75,8 @@ export default class TestWebpartNode22 extends React.Component<
       monthBirthdays: [],
       IsLoading: false,
       IsDataFound: false,
-      IsCalloutVisible: false,
     };
   }
-
-  private _menuButtonElement = React.createRef<HTMLDivElement>();
-  // Use getId() to ensure that the callout label and description IDs are unique on the page.
-  // (It's also okay to use plain strings without getId() and manually ensure their uniqueness.)
-  private _labelId: string = getId("callout-label");
-  private _descriptionId: string = getId("callout-description");
 
   public async componentDidMount(): Promise<void> {
     if (Environment.type === EnvironmentType.SharePoint) {
@@ -110,101 +101,108 @@ export default class TestWebpartNode22 extends React.Component<
     return normalizedDate === format(pivotDay, "dd/MM");
   }
 
-  public render(): React.ReactElement<ITestWebpartNode22Props> {
-    const { monthBirthdays, IsLoading, IsDataFound, IsCalloutVisible } =
-      this.state;
+  public BirthdayList = React.forwardRef<HTMLUListElement>(
+    (props: React.ComponentProps<typeof List>, ref) => (
+      <List aria-label="Countries" tabIndex={0} {...props} ref={ref} />
+    )
+  );
 
-    const containerStackTokens: IStackTokens = { childrenGap: 20 };
+  public render(): React.ReactElement<ITestWebpartNode22Props> {
+    const { monthBirthdays, IsLoading, IsDataFound } = this.state;
 
     return (
-      <Stack tokens={containerStackTokens}>
-        <Stack horizontal horizontalAlign="space-between">
-          <Stack.Item align="start">
-            <div style={webpartHeaderStyles}>
-              {this.props.isEditMode && (
-                <textarea
-                  onChange={this.setTitle.bind(this)}
-                  style={webpartHeaderEditStyles}
-                  placeholder="Agregar un título"
-                  aria-label="Agregar un título"
-                  defaultValue={this.props.title}
-                />
-              )}
-              {!this.props.isEditMode && (
-                <span style={webpartHeaderViewStyles}>{this.props.title}</span>
-              )}
-            </div>
-          </Stack.Item>
-          <Stack.Item align="end">
-            <span ref={this._menuButtonElement}>
-              <ActionButton
-                data-automation-id="test"
-                iconProps={{ iconName: "Edit" }}
-                allowDisabledFocus={true}
-                onClick={this._onShowMenuClicked}
-              >
-                ¿Querés modificar alguna información?
-              </ActionButton>
-            </span>
-            <Callout
-              className={mainStyles.callout}
-              ariaLabelledBy={this._labelId}
-              ariaDescribedBy={this._descriptionId}
-              role="alertdialog"
-              gapSpace={0}
-              target={this._menuButtonElement.current}
-              onDismiss={this._onCalloutDismiss}
-              setInitialFocus={true}
-              hidden={!IsCalloutVisible}
-            >
-              <div className={mainStyles.header}>
-                <p className={mainStyles.title} id={this._labelId}>
-                  Si preferís no mostrar tu cumpleaños o detectás un error,
-                  podés escribirnos a rrhhbue@eby.org.ar
-                </p>
+      <FluentProvider theme={webLightTheme}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <div>
+              <div style={webpartHeaderStyles}>
+                {this.props.isEditMode && (
+                  <textarea
+                    onChange={this.setTitle.bind(this)}
+                    style={webpartHeaderEditStyles}
+                    placeholder="Agregar un título"
+                    aria-label="Agregar un título"
+                    defaultValue={this.props.title}
+                  />
+                )}
+                {!this.props.isEditMode && (
+                  <span style={webpartHeaderViewStyles}>
+                    {this.props.title}
+                  </span>
+                )}
               </div>
-            </Callout>
-          </Stack.Item>
-        </Stack>
-        {IsLoading && (
-          <Spinner size={SpinnerSize.large} label="Buscando cumpleaños..." />
-        )}
-        {!IsLoading &&
-        IsDataFound &&
-        monthBirthdays &&
-        monthBirthdays.length > 0 ? (
-          monthBirthdays.map((person: IMonthBirthday) => {
-            const birthday: string = person.field_1;
-            const fullName: string = person.Title;
-            const showToday: boolean = this.compareToToday(birthday);
+            </div>
+            <Popover>
+              <PopoverTrigger disableButtonEnhancement>
+                <Button appearance="subtle" icon={<EditRegular />}>
+                  ¿Querés modificar alguna información?
+                </Button>
+              </PopoverTrigger>
+              <PopoverSurface tabIndex={-1}>
+                <>
+                  <h3>Contactanos</h3>
+                  <div>
+                    Si preferís no mostrar tu cumpleaños o detectás un error,
+                    podés escribirnos a rrhhbue@eby.org.ar
+                  </div>
+                </>
+              </PopoverSurface>
+            </Popover>
+          </div>
+          {IsLoading && <Spinner size="large" label="Buscando cumpleaños..." />}
+          {!IsLoading &&
+          IsDataFound &&
+          monthBirthdays &&
+          monthBirthdays.length > 0 ? (
+            <FixedSizeList
+              height={300}
+              itemCount={monthBirthdays.length}
+              itemSize={50}
+              width="100%"
+              itemData={monthBirthdays}
+              outerElementType={this.BirthdayList}
+            >
+              {({ index, style, data }) => {
+                const person = data[index];
+                const birthday: string = person.field_1;
+                const fullName: string = person.Title;
+                const showToday: boolean = this.compareToToday(birthday);
 
-            const examplePersona: IPersonaSharedProps = {
-              text: fullName,
-              tertiaryText: birthday,
-            };
-
-            return (
-              <Persona
-                {...examplePersona}
-                size={showToday ? PersonaSize.size72 : PersonaSize.size48}
-                presence={PersonaPresence.none}
-                onRenderSecondaryText={(props: IPersonaProps) =>
-                  this._onRenderSecondaryText(
-                    props.secondaryText,
-                    props.tertiaryText,
-                    showToday
-                  )
-                }
-                onRenderTertiaryText={this._onRenderTertiaryText}
-                hidePersonaDetails={false}
-                key={person.field_1 + person.Title}
-              />
-            );
-          })
-        ) : (
-          <MessageBar>No hay cumpleaños este mes :(.</MessageBar>
-        )}
-      </Stack>
+                return (
+                  <ListItem
+                    style={style}
+                    aria-setsize={monthBirthdays.length}
+                    aria-posinset={index + 1}
+                  >
+                    <Persona
+                      avatar={{ color: "colorful" }}
+                      name={fullName}
+                      size={showToday ? "extra-large" : "medium"}
+                      presence={undefined}
+                      secondaryText={
+                        <React.Fragment>
+                          <FoodCakeFilled style={{ marginRight: "5px" }} />
+                          {showToday ? "¡Hoy cumple años!" : birthday}
+                        </React.Fragment>
+                      }
+                    />
+                  </ListItem>
+                );
+              }}
+            </FixedSizeList>
+          ) : (
+            <MessageBar>
+              <MessageBarTitle>No hay cumpleaños este mes :(.</MessageBarTitle>
+            </MessageBar>
+          )}
+        </div>
+      </FluentProvider>
     );
   }
 
@@ -269,64 +267,7 @@ export default class TestWebpartNode22 extends React.Component<
     }
   }
 
-  private _onRenderSecondaryText = (
-    secondaryText: string | undefined,
-    tertiaryText: string | undefined,
-    showToday: boolean
-  ): JSX.Element => {
-    return (
-      <div>
-        {secondaryText && (
-          <React.Fragment>
-            <Icon iconName={"Suitcase"} style={{ marginRight: "5px" }} />
-            {secondaryText}
-          </React.Fragment>
-        )}
-        {!showToday && (
-          <React.Fragment>
-            <Icon
-              iconName={"BirthdayCake"}
-              style={{
-                marginRight: "5px",
-                marginLeft: secondaryText ? "10px" : "0px",
-                color: "#5C2E91",
-              }}
-            />
-            {tertiaryText}
-          </React.Fragment>
-        )}
-      </div>
-    );
-  };
-
-  private _onRenderTertiaryText = (props: IPersonaProps): JSX.Element => {
-    return (
-      <div>
-        <Icon
-          iconName={"BirthdayCake"}
-          style={{
-            marginRight: "5px",
-            color: "#5C2E91",
-          }}
-        />
-        {"¡Hoy cumple años! "}
-      </div>
-    );
-  };
-
   private setTitle(event: React.FormEvent<HTMLTextAreaElement>): void {
     this.props.setTitle(event.currentTarget.value);
   }
-
-  private _onShowMenuClicked = (): void => {
-    this.setState({
-      IsCalloutVisible: !this.state.IsCalloutVisible,
-    });
-  };
-
-  private _onCalloutDismiss = (): void => {
-    this.setState({
-      IsCalloutVisible: false,
-    });
-  };
 }
